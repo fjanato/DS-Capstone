@@ -51,77 +51,77 @@ test <- read_delim("test_FD001.txt", delim = " ", col_names = FALSE)
 train <- read_delim("train_FD001.txt", delim = " ", col_names = FALSE)
 CTF <- read_csv("RUL_FD001.txt", col_names = FALSE)
 
-summary(train)
-# Data preparation
-# Create a new dataset to get the Failure Cycle from the Train Data
-# Train_fail_cylce <- train %>% group_by(Unit_Num) %>% summarize(failcycle = max(TimeCycles))
-# Train_fail_cylce$status <- 'fail'
-# plot(Train_fail_cylce)
-# hist(Train_fail_cylce$failcycle)
-
+# Set header Names for Train set
 names(train) <- c('UnitNum','TimeCycles','OperSet1','OperSet2','OperSet3','SensorRead01','SensorRead02','SensorRead03','SensorRead04','SensorRead05'
                   ,'SensorRead06','SensorRead07','SensorRead08','SensorRead09','SensorRead10','SensorRead11','SensorRead12','SensorRead13','SensorRead14'
                   ,'SensorRead15','SensorRead16','SensorRead17','SensorRead18','SensorRead19','SensorRead20','SensorRead21','CyclesToFail')
 
+# Set header Names for Test set
 names(test) <- c('UnitNum','TimeCycles','OperSet1','OperSet2','OperSet3','SensorRead01','SensorRead02','SensorRead03','SensorRead04','SensorRead05'
-                  ,'SensorRead06','SensorRead07','SensorRead08','SensorRead09','SensorRead10','SensorRead11','SensorRead12','SensorRead13','SensorRead14'
-                  ,'SensorRead15','SensorRead16','SensorRead17','SensorRead18','SensorRead19','SensorRead20','SensorRead21','CyclesToFail')
+                 ,'SensorRead06','SensorRead07','SensorRead08','SensorRead09','SensorRead10','SensorRead11','SensorRead12','SensorRead13','SensorRead14'
+                 ,'SensorRead15','SensorRead16','SensorRead17','SensorRead18','SensorRead19','SensorRead20','SensorRead21','CyclesToFail')
 
+# Set header Names for RUL number applicable to Test set
 names(CTF) <- c('CyclesToFail')
 
+summary(train)
+
+
+
+# Find the last Cycle number for each UnitNum (Jet Engine) in the Train set
 TrainFailCycle <- tapply(train$TimeCycles, train$UnitNum, max)
+
+# Find the last Cycle number for each UnitNum (Jet Engine) in the Test set
 TestFailCycle <- tapply(test$TimeCycles, test$UnitNum, max)
-qplot(y= TrainFailCycle, x=1:length(TrainFailCycle), main = 'Failure Cycle by Engine', ylab = 'Cycle of Failure', xlab = 'Unit Number')
+
+# Plot Last Cycle per Unit
+qplot(y= TrainFailCycle, x=1:length(TrainFailCycle), main = 'Failure Cycle by Engine', ylab = 'Cycle of Failure', xlab = 'Unit Number', geom = "line")
+
+# Show distribution of Failure Cycle in Engines
+hist(TrainFailCycle)
 
 
-# #create a binomial classification on the training set, fail for the last reading and run for the previous one
-# Train_RF <- merge(train, Train_fail_cylce, by=1:2, all.x = TRUE)
-# Train_RF$status <- ifelse(is.na(Train_RF$status), 'run', 'fail')
-# Train_RF$status <- factor(Train_RF$status, levels = c('fail','run'))
 
+# Get RUL values for file 
 RealCTF <- unlist(CTF)
 
+# Calculate Cycles to Fails Value for Train Set
 train$CyclesToFail <- TrainFailCycle[train$UnitNum] - train$TimeCycles
 
-#test$CyclesToFail <- CTF[test$UnitNum] + TestFailCycle[test$UnitNum] - test$TimeCycles
-
+# Calculate Cycles to Fails Value for Test Set
 test$CyclesToFail <-   RealCTF[test$UnitNum] + TestFailCycle[test$UnitNum] - test$TimeCycles
 
-# Get a list of all Measurement related columns
-sensor_measure_cols = c('SensorRead01','SensorRead02','SensorRead03','SensorRead04','SensorRead05'
-                        ,'SensorRead06','SensorRead07','SensorRead08','SensorRead09','SensorRead10','SensorRead11','SensorRead12','SensorRead13','SensorRead14'
-                        ,'SensorRead15','SensorRead16','SensorRead17','SensorRead18','SensorRead19','SensorRead20','SensorRead21')
+# Build the preliminary list of variables for the prediction model 
+num_cols = c('OperSet1','OperSet2','SensorRead02','SensorRead03','SensorRead04','SensorRead06','SensorRead07','SensorRead08','SensorRead09',
+             'SensorRead11','SensorRead12','SensorRead13','SensorRead14','SensorRead15','SensorRead17','SensorRead20','SensorRead21')
 
 
-operation_setting_cols = c('OperSet1','OperSet2','OperSet3')
-
-num_cols = c('OperSet1','OperSet2','OperSet3','SensorRead01','SensorRead02','SensorRead03','SensorRead04','SensorRead05'
-             ,'SensorRead06','SensorRead07','SensorRead08','SensorRead09','SensorRead10','SensorRead11','SensorRead12','SensorRead13','SensorRead14'
-             ,'SensorRead15','SensorRead16','SensorRead17','SensorRead18','SensorRead19','SensorRead20','SensorRead21')
-
-
-
-
-
-# Visualize Correlations between variables
+# Calculate Correlations between variables
 correlations <- cor(data.frame(train[,num_cols]))
-#correlations
 
-heatmap(correlations, symm = TRUE)
-
+# Visualize correlations
 corrplot(correlations)
 
 # many unknows correll, check SD to validate vars w/o
 
 
 
-train_sd <-sapply(train[,3:26], sd)
+train_sd <-sapply(train[,num_cols], sd)
 train_sd
 
-# remove variables that have no Standard deviations, no changes in time, mean not affecting the result
-rev_cols = c('OperSet1','OperSet2','SensorRead02','SensorRead03','SensorRead04',
-             'SensorRead06','SensorRead07','SensorRead08','SensorRead09','SensorRead11','SensorRead12','SensorRead13','SensorRead14',
-             'SensorRead15','SensorRead17','SensorRead20','SensorRead21')
+
+rev_correl <- cor(data.frame(train[,num_cols]))
+#correlations
+
+heatmap(rev_correl, symm = TRUE)
+
+corrplot(rev_correl, type = "upper",  order = 'hclust')
+
+
+# Remove Sen_Read_6 no strong correlation with any other variable but itself, same case as for OperSet 1 and 2
+rev_cols = c('SensorRead02','SensorRead03','SensorRead04','SensorRead07','SensorRead08','SensorRead09',
+             'SensorRead11','SensorRead12','SensorRead13','SensorRead14','SensorRead15','SensorRead17','SensorRead20','SensorRead21')
+
 
 rev_correl <- cor(data.frame(train[,rev_cols]))
 #correlations
@@ -131,28 +131,12 @@ heatmap(rev_correl, symm = TRUE)
 corrplot(rev_correl,  order = 'hclust')
 
 
-# Remove Sen_Read_6 no strong correlation with any other variable but itself, same case as for OperSet 1 and 2
-# #rev_cols1 = c('SensorRead02','SensorRead03','SensorRead04',
-#              'SensorRead07','SensorRead08','SensorRead09','SensorRead11','SensorRead12','SensorRead13','SensorRead14',
-#              'SensorRead15','SensorRead17','SensorRead20','SensorRead21')
-rev_cols1 = c('SensorRead02','SensorRead03','SensorRead04',
-              'SensorRead07','SensorRead11','SensorRead12',
-              'SensorRead15','SensorRead17','SensorRead20','SensorRead21')
-
-rev_correl <- cor(data.frame(train[,rev_cols1]))
-#correlations
-
-heatmap(rev_correl, symm = TRUE)
-
-corrplot(rev_correl,  order = 'hclust')
-
-
 #Scale numeric features
-preProcValues <- preProcess(train[,rev_cols1], method = c("center", "scale"))
+preProcValues <- preProcess(train[,rev_cols], method = c("center", "scale"))
 
-train[,rev_cols1] = predict(preProcValues, train[,rev_cols1])
-test[,rev_cols1] = predict(preProcValues, test[,rev_cols1])
-head(train[,rev_cols1])
+train[,rev_cols] = predict(preProcValues, train[,rev_cols])
+test[,rev_cols] = predict(preProcValues, test[,rev_cols])
+head(train[,rev_cols])
 
 
 

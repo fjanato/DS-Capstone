@@ -4,13 +4,13 @@ output:
   pdf_document: default
 ---
 
-# Jet Enginge Remaining Useful Life
+# Turbofan Engine Remaining Useful Life
 ## Data Science Bootcamp
 ## Casptone Project
 
 ---
 
-![Internal View of a Jet Engine](JetEngine.jpg)
+![Internal View of a Jet/Turbofan Engine](JetEngine.jpg)
 
 ***
 
@@ -27,7 +27,7 @@ In this dataset there are 100 Jet Engines, data has been collected using 21 dife
 
 In the test_FD001 file the data for operational settings and sensor is provided however the last cycle number doesn't represent the failure cycle, the real cycle number for each engine on the test set is provided by the file RUL_FD001. All engines are the same model.
 
-![Breakdown of Internal components of a Jet Engine](JetEngineComp.png)
+![Breakdown of Internal components of a Jet/Turbofan Engine](JetEngineComp.png)
 
 ***
 
@@ -74,6 +74,20 @@ library(pROC)
 library(modeest)
 library(corrplot)
 library(psych)
+
+print_metrics = function(lin_mod, df, score, label){
+  resids = df[,label] - df[,score]
+  resids2 = resids**2
+  N = length(score)
+  r2 = as.character(round(summary(lin_mod)$r.squared, 4))
+  adj_r2 = as.character(round(summary(lin_mod)$adj.r.squared, 4))
+  cat(paste('Mean Square Error      = ', as.character(round(sum(resids2)/N, 4)), '\n'))
+  cat(paste('Root Mean Square Error = ', as.character(round(sqrt(sum(resids2)/N), 4)), '\n'))
+  cat(paste('Mean Absolute Error    = ', as.character(round(sum(abs(resids))/N, 4)), '\n'))
+  cat(paste('Median Absolute Error  = ', as.character(round(median(abs(unlist(resids))), 4)), '\n'))
+  cat(paste('R^2                    = ', r2, '\n'))
+  cat(paste('Adjusted R^2           = ', adj_r2, '\n'))
+}
 ```
 
 Loading Datasets and Formating columns
@@ -111,7 +125,7 @@ From the summary of the train data we can notice that:
     Sensor Readings    | SensorRead16 | Value won't change over time
     Sensor Readings    | SensorRead18 | Value won't change over time
     Sensor Readings    | SensorRead19 | Value won't change over time
-    Operating Settings | OperSet3    | Value won't change over time
+    Operating Settings | OperSet3     | Value won't change over time
 
 A plot chart of the variables described above can be accessed by clicking in the links below:
 
@@ -125,10 +139,10 @@ Let's start by finding the last Cycle for each engine in the Train and Test set
 
 ```{r Last Cycle}
 # Find the last Cycle number for each UnitNum (Jet Engine) in the Train set
-TrainFailCycle <- tapply(train$TimeCycles, train$UnitNum, max)
+TrainFailCycle <- as.vector(tapply(train$TimeCycles, train$UnitNum, max))
 
 # Find the last Cycle number for each UnitNum (Jet Engine) in the Test set
-TestFailCycle <- tapply(test$TimeCycles, test$UnitNum, max)
+TestFailCycle <- as.vector(tapply(test$TimeCycles, test$UnitNum, max))
 
 # Plot Last Cycle per Unit
 qplot(y= TrainFailCycle, x=1:length(TrainFailCycle), main = 'Failure Cycle by Engine', ylab = 'Cycle of Failure', xlab = 'Unit Number', geom = "line")
@@ -164,7 +178,8 @@ RealCTF <- unlist(CTF)
 train$CyclesToFail <- TrainFailCycle[train$UnitNum] - train$TimeCycles
 
 # Calculate Cycles to Fails Value for Test Set
-test$CyclesToFail <-   RealCTF[test$UnitNum] + TestFailCycle[test$UnitNum] - test$TimeCycles
+test$CyclesToFail <-   RealCTF[test$UnitNum] + TestFailCycle[test$UnitNum]
+test$CyclesToFail <-  test$CyclesToFail - test$TimeCycles
 
 # Build the preliminary list of variables for the prediction model 
 num_cols = c('OperSet1','OperSet2','SensorRead02','SensorRead03','SensorRead04','SensorRead06','SensorRead07','SensorRead08','SensorRead09',
@@ -195,6 +210,112 @@ By looking at the charts above we can extract a couple of observations:
 
 2. Variable SensorRead06 has very weak correlation with any of the other variables in the study, this can also be safely removed
 
+In conclusion, by looking at the plots from all Variables and combining with the observation in the Heatmaps and Correlograms this is the final list of Variables to use in the construction of the models:
+
+
+    Section            | Variable     
+    ------------------ | ------------ 
+    Sensor Readings    | SensorRead02 
+    Sensor Readings    | SensorRead03 
+    Sensor Readings    | SensorRead04 
+    Sensor Readings    | SensorRead07 
+    Sensor Readings    | SensorRead08 
+    Sensor Readings    | SensorRead09 
+    Sensor Readings    | SensorRead11 
+    Sensor Readings    | SensorRead12 
+    Sensor Readings    | SensorRead13 
+    Sensor Readings    | SensorRead14 
+    Sensor Readings    | SensorRead15 
+    Sensor Readings    | SensorRead17 
+    Sensor Readings    | SensorRead20 
+    Sensor Readings    | SensorRead21 
+
+
+
+## Prediction Model Testing 
+
+Now that we have selected the variables to use in the models, let's take a look at the relationship between the Run Cycles and the Remaining Useful life in the Train data.
+
+```{r PLot Cycles vs RUL, include=FALSE}
+# Remove Sen_Read_6 no strong correlation with any other variable but itself, same case as for OperSet 1 and 2
+rev_cols = c('SensorRead02','SensorRead03','SensorRead04','SensorRead07','SensorRead08','SensorRead09',
+             'SensorRead11','SensorRead12','SensorRead13','SensorRead14','SensorRead15','SensorRead17','SensorRead20','SensorRead21')
+
+
+#Plot RUL per cycle number on Train set
+ggplot(train, aes(TimeCycles, CyclesToFail) ) +
+  geom_point() +
+  stat_smooth() +
+  ggtitle("Cycles Runs per Engine vs Cycles to Fail")
+```  
+
+From this chart we can see that the relationship between the Run cycles and the Remaining Useful life (RUL) also known as Cycles to Fail in the study is non-linear
+
+However the majority of the TimeCyle series the relationship is linear, for that reason the approach on this model selection will be focus in test the linear regression model and the polynomial regression and evaluate which one performs better.
+
+### Linear Regression model
+
+```{r Scaling Numeric Values}
+# Scaling numeric Values
+preProcValues <- preProcess(train[,rev_cols], method = c("center", "scale"))
+train[,rev_cols] = predict(preProcValues, train[,rev_cols])
+test[,rev_cols] = predict(preProcValues, test[,rev_cols])
+
+# Set variables for the Train model
+TrainFormula <- CyclesToFail ~ SensorRead02 + SensorRead03 + SensorRead04 + SensorRead07 + SensorRead08 + SensorRead09 +
+  SensorRead11 + SensorRead12 + SensorRead13 + SensorRead14 + SensorRead15 + SensorRead17 + SensorRead20 + SensorRead21
+```
+
+Once we have scaled all Numerical values we proceed to create and test the Linear regression Model
+
+```{r Linear Regression Model}
+# Create Linear Regression Model
+lin_mod = lm(TrainFormula, data = train)
+test$LR_score <- predict(lin_mod, newdata = test)
+
+
+# Model performance
+print_metrics(lin_mod, test, 'LR_score', 'CyclesToFail')  
+
+# Visualize Linear Regression Model
+
+ggplot(test, aes(CyclesToFail, LR_score) ) +
+  geom_point() +
+  stat_smooth(method = lm, formula = y ~ x) +
+  ggtitle('Linear Regression Model vs Actual Cycles to Failure')
+
+```
+
+Given the R-Squared value of 0.58 we can conclude that this model basically is not fitted for the purpose. Additionaly as depicted in the plot above the Linear Model does not fit properly th obseved distribution of values.
+
+### Polynomial Regression model
+
+Let's now explore the polynomial Regression model as it offers a better performance is cases where a non-linear behavior is observed.
+
+```{r Polynomial Regression}
+
+# Build the model
+poly_model <- lm(CyclesToFail ~ polym(SensorRead02, SensorRead03, SensorRead04, SensorRead07, SensorRead08, SensorRead09,
+                                      SensorRead11, SensorRead12, SensorRead13, SensorRead14,
+                                      SensorRead15, SensorRead17, SensorRead20, SensorRead21, 
+                                      degree = 2, raw = TRUE), data = train)
+
+
+# Make predictions
+test$poly_score <- predict(poly_model, newdata = test)
+predictions <- poly_model %>% predict(test)
+# Model performance
+print_metrics(poly_model, test, 'poly_score', 'CyclesToFail')  
+
+# Plot Model Accuracy
+ggplot(test, aes(CyclesToFail, poly_score) ) +
+  geom_point() +
+  stat_smooth(method = lm, formula = y ~ poly(x, 5, raw = TRUE)) +
+  ggtitle('Polynomial Regression Model vs Actual Cycles to Failure')
+
+```
+
+The last plotted chart shows a better fitted model to the observed values and exhibiting a better R-squared value 0.63
 
 
 [^1]: A. Saxena and K. Goebel (2008). "Turbofan Engine Degradation Simulation Data Set", NASA Ames Prognostics Data Repository (http://ti.arc.nasa.gov/project/prognostic-data-repository), NASA Ames Research Center, Moffett Field, CA

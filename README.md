@@ -1,7 +1,8 @@
 # DS-Capstone
 
 ###Jet Engine Remaining Useful Life (RUL) prediction
-Oct, 2020
+####Freddy Anato
+#####September, 2020
 
 ###Overview
 ___

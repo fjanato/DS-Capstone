@@ -1,12 +1,12 @@
 # DS-Capstone
 
-###Jet Engine Remaining Useful Life (RUL) prediction
+### Jet Engine Remaining Useful Life (RUL) prediction
 
-####Freddy Anato
+#### Freddy Anato
 
-#####September, 2020
+##### September, 2020
 
-###Overview
+### Overview
 ___
 
 Predictive analytics is a category of data analytics aimed at making predictions about future outcomes based on historical data and analytics techniques such as statistical modeling and machine learning. [^1] 
@@ -19,7 +19,7 @@ One of the organizations making use of predictive analytics is Aerospace, where 
 
 In this project well be using Predictive Analytics on a Dataset publicly made available by NASA [^3] to predict the amount of remaining use cycles in turbofan engines.
 
-####How to use/navigate this project repository?
+#### How to use/navigate this project repository?
 ---
 For an easy exploration of this project is recommended have available the following tools:
 

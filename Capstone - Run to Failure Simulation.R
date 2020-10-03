@@ -290,7 +290,7 @@ print_metrics(test, "CyclesToFail")
 
 
 
-
+##### Var Importance per Model
 options(repr.plot.width=4, repr.plot.height=3)
 imp = varImp(rf_model)
 imp = varImp(lin_mod)
@@ -308,17 +308,5 @@ print(imp)
 
 
 
-hist_resids = function(df, score, label, bins = 10){
-  options(repr.plot.width=4, repr.plot.height=3) # Set the initial plot area dimensions
-  df$resids = df[,label] - score
-  bw = (max(df$resids) - min(df$resids))/(bins + 1)
-  ggplot(df, aes(resids)) + 
-    geom_histogram(binwidth = bw, aes(y=..density..), alpha = 0.5) +
-    geom_density(aes(y=..density..), color = 'blue') +
-    xlab('Residual value') + ggtitle('Histogram of residuals')
-}
-
-hist_resids(test, 'LR_score', 'CyclesToFail') 
-######################
 
 

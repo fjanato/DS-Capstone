@@ -213,22 +213,22 @@ By looking at the charts above we can extract a couple of observations:
 In conclusion, by looking at the plots from all Variables and combining with the observation in the Heatmaps and Correlograms this is the final list of Variables to use in the construction of the models:
 
 
-    Section            | Variable     
-    ------------------ | ------------ 
-    Sensor Readings    | SensorRead02 
-    Sensor Readings    | SensorRead03 
-    Sensor Readings    | SensorRead04 
-    Sensor Readings    | SensorRead07 
-    Sensor Readings    | SensorRead08 
-    Sensor Readings    | SensorRead09 
-    Sensor Readings    | SensorRead11 
-    Sensor Readings    | SensorRead12 
-    Sensor Readings    | SensorRead13 
-    Sensor Readings    | SensorRead14 
-    Sensor Readings    | SensorRead15 
-    Sensor Readings    | SensorRead17 
-    Sensor Readings    | SensorRead20 
-    Sensor Readings    | SensorRead21 
+Section            |   Variable     
+------------------ | -------------- 
+Sensor Readings    | SensorRead02 
+Sensor Readings    | SensorRead03 
+Sensor Readings    | SensorRead04 
+Sensor Readings    | SensorRead07 
+Sensor Readings    | SensorRead08 
+Sensor Readings    | SensorRead09 
+Sensor Readings    | SensorRead11 
+Sensor Readings    | SensorRead12 
+Sensor Readings    | SensorRead13 
+Sensor Readings    | SensorRead14 
+Sensor Readings    | SensorRead15 
+Sensor Readings    | SensorRead17 
+Sensor Readings    | SensorRead20 
+Sensor Readings    | SensorRead21
 
 
 
@@ -288,7 +288,7 @@ ggplot(test, aes(CyclesToFail, LR_score) ) +
 
 Given the R-Squared value of 0.58 we can conclude that this model basically is not fitted for the purpose. Additionaly as depicted in the plot above the Linear Model does not fit properly th obseved distribution of values.
 
-### Polynomial Regression model
+### Polynomial Regression model [^3]
 
 Let's now explore the polynomial Regression model as it offers a better performance is cases where a non-linear behavior is observed.
 
@@ -318,7 +318,23 @@ ggplot(test, aes(CyclesToFail, poly_score) ) +
 The last plotted chart shows a better fitted model to the observed values and exhibiting a better R-squared value 0.63
 
 
+### Findings
+
+- Data preparation and variable enhancements is key in the process of data analysis. In this case we have a very clean dataset obtained from a accredited and recognized entity such NASA, however the data was not provided in a way that facilitates the process of results validation on the applied models
+
+- A polynomial regression model resulted in a better fit for the problem presented.
+
+- Variable selection for model training can be supplemented by an initial revision on supporting tools and methods such correlograms, heatmaps and variable plots charts
+
+
+
+
+
+
+
 [^1]: A. Saxena and K. Goebel (2008). "Turbofan Engine Degradation Simulation Data Set", NASA Ames Prognostics Data Repository (http://ti.arc.nasa.gov/project/prognostic-data-repository), NASA Ames Research Center, Moffett Field, CA
 
 
 [^2]: What are Predictive Analytics and how important are they to effective Asset Management? (https://www.processindustryforum.com/article/predictive-analytics-important-effective-asset-management)
+
+[^3]: Nonlinear Regression Essentials in R: Polynomial and Spline Regression Models (http://www.sthda.com/english/articles/40-regression-analysis/162-nonlinear-regression-essentials-in-r-polynomial-and-spline-regression-models/)
